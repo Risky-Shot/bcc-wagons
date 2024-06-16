@@ -15,6 +15,8 @@ local Cam = false
 local HasJob = false
 local IsWainwright = false
 local Trading = false
+-- Comps
+local LanternsUsing, LiveriesUsing, PropsetUsing, TintsUsing = 0, 0, 0, 0
 
 CreateThread(function()
     StartPrompts()
@@ -203,6 +205,30 @@ RegisterNUICallback('RenameWagon', function(data, cb)
     SetWagonName(data, true)
 end)
 
+local function GetCompsForWagon(WagonModel)
+    local comps = {}
+    -- Fill Above Table with keys
+    for compType, v in pairs(Comps) do
+        comps[compType] = {}
+        for model, compsTable in pairs(v) do
+            if model:lower() == WagonModel:lower() then
+                if #compsTable > 0 then
+                    for _, data in pairs(compsTable) do
+                        table.insert(comps[compType], data)
+                    end  
+                end
+            end
+        end
+
+        if #comps[compType] < 1 then
+            comps[compType] = nil
+        end
+    end
+
+    return comps
+end
+
+
 RegisterNUICallback('LoadMyWagon', function(data, cb)
     cb('ok')
     if ShopEntity then
@@ -223,9 +249,62 @@ RegisterNUICallback('LoadMyWagon', function(data, cb)
     Citizen.InvokeNative(0x7263332501E07F52, MyEntity, true) -- SetVehicleOnGroundProperly
     Citizen.InvokeNative(0x7D9EFB7AD6B19754, MyEntity, true) -- FreezeEntityPosition
     SetModelAsNoLongerNeeded(model)
+    local comps = GetCompsForWagon(data.WagonModel)
+    print(json.encode(comps))
+    SendNUIMessage({
+        action = 'updateComps',
+        compData = comps
+    })
     if not Cam then
         Cam = true
         CameraLighting()
+    end
+end)
+
+-- Manage Comps
+RegisterNUICallback('Lanterns', function(data, cb)
+    cb('ok')
+    if tonumber(data.id) == -1 then
+        LanternsUsing = 0
+        Citizen.InvokeNative(0xE31C0CB1C3186D40, MyEntity)
+    else
+        Citizen.InvokeNative(0xC0F0417A90402742, MyEntity, GetHashKey(data.hash))
+        LanternsUsing = data.hash
+    end
+end)
+
+RegisterNUICallback('Liveries', function(data, cb)
+    cb('ok')
+    if tonumber(data.id) == -1 then
+        LiveriesUsing = 0
+        Citizen.InvokeNative(0xF89D82A0582E46ED, MyEntity, -1)
+    else
+        Citizen.InvokeNative(0xF89D82A0582E46ED, MyEntity, tonumber(data.hash))
+        LiveriesUsing = data.hash
+    end
+end)
+
+RegisterNUICallback('Propsets', function(data, cb)
+    cb('ok')
+    if tonumber(data.id) == -1 then
+        PropsetUsing = 0
+        Citizen.InvokeNative(0x75F90E4051CC084C, MyEntity, 0)
+    else
+        Citizen.InvokeNative(0x75F90E4051CC084C, MyEntity, 0)
+        Wait(100)
+        Citizen.InvokeNative(0x75F90E4051CC084C, MyEntity, GetHashKey(data.hash))
+        PropsetUsing = data.hash
+    end
+end)
+
+RegisterNUICallback('Tints', function(data, cb)
+    cb('ok')
+    if tonumber(data.id) == -1 then
+        TintsUsing = 0
+        Citizen.InvokeNative(0x8268B098F6FCA4E2, MyEntity, 0)
+    else
+        Citizen.InvokeNative(0x8268B098F6FCA4E2, MyEntity, tonumber(data.hash))
+        TintsUsing = data.hash
     end
 end)
 

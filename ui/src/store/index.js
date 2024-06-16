@@ -7,6 +7,12 @@ export default createStore({
     wagons: null,
     shopName: null,
     activeWagon: null,
+
+    comps: null,
+    compCashPrice: 0,
+    compGoldPrice: 0,
+    showCompPrice: false,
+    allowSave: false,
   },
   getters: {},
   mutations: {
@@ -25,6 +31,24 @@ export default createStore({
     SET_CURRENCY_TYPE(state, payload) {
       state.currencyType = payload;
     },
+
+    //CUSTOMIZATION
+    SET_COMPONENTS(state, payload) {
+      console.log(payload);
+      state.comps = payload;
+    },
+    SET_COMP_CASH_PRICE(state, payload) {
+      state.compCashPrice = payload;
+    },
+    SET_COMP_GOLD_PRICE(state, payload) {
+      state.compGoldPrice = payload;
+    },
+    SET_SHOW_COMP_PRICE(state, payload) {
+      state.showCompPrice = payload;
+    },
+    SET_ALLOW_SAVE(state, payload) {
+      state.allowSave = payload;
+    },
   },
   actions: {
     setMyWagons(context, payload) {
@@ -41,6 +65,22 @@ export default createStore({
     },
     setCurrencyType(context, payload) {
       context.commit("SET_CURRENCY_TYPE", payload);
+    },
+
+    setComponents(context, payload) {
+      context.commit("SET_COMPONENTS", payload);
+    },
+    setCompCashPrice(context, payload) {
+      context.commit("SET_COMP_CASH_PRICE", payload);
+    },
+    setCompGoldPrice(context, payload) {
+      context.commit("SET_COMP_GOLD_PRICE", payload);
+    },
+    setShowCompPrice(context, payload) {
+      context.commit("SET_SHOW_COMP_PRICE", payload);
+    },
+    setAllowSave(context, payload) {
+      context.commit("SET_ALLOW_SAVE", payload);
     },
   },
   modules: {},

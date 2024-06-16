@@ -53,6 +53,7 @@ export default {
     model: String,
     selected: Number,
     wagon: Object,
+    components : Object
   },
   data() {
     return {
@@ -78,7 +79,6 @@ export default {
     SelectWagon() {
       if (!this.isOpen) {
         this.$store.dispatch("setSelectedWagon", this.wagon);
-
         api
           .post("SelectWagon", {
             WagonId: this.index,

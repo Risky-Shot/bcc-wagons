@@ -8,18 +8,10 @@
       </div>
 
       <div class="btn-menu main-nav-buttons">
-        <MenuButton
-          label="My Wagons"
-          :selectedPage="page"
-          @click="page = 'wagons'"
-          class="enabled"
-        />
-        <MenuButton
-          label="Wagon Shop"
-          :selectedPage="page"
-          @click="page = 'shop'"
-          class="enabled"
-        />
+        <MenuButton label="My Wagons" :selectedPage="page" @click="page = 'wagons'" class="enabled" />
+        <MenuButton label="Wagon Shop" :selectedPage="page" @click="page = 'shop'" class="enabled" />
+        <MenuButton label="Customise" :selectedPage="page" @click="page = 'customise'"
+          :class="{'disabled-btn': isClosed, enabled: !isClosed}" :disabled="isClosed" />
       </div>
 
       <div class="divider-menu-top"></div>
@@ -32,27 +24,23 @@
         <ShopMenu />
       </div>
 
+      <div class="scroll-container" v-else-if="page == 'customise'">
+        <CompMenu />
+      </div>
+
       <div class="divider-menu-top" style="margin-top: 1rem"></div>
 
       <div class="btn-bottom-main btn-bottom">
-        <button id="cancel" class="btn-select" @click="close()">Save</button>
-        <button
-          id="rotate_left"
-          class="btn-select btn-rotate"
-          @mousedown="startRotate('left')"
-          @mouseleave="onMouseLeave"
-        >
+        <button id="save" :class="{disabled: !isSaveEnabled, 'btn-select': isSaveEnabled}" @click="save()" :disabled="!isSaveEnabled">Save</button>
+        <button id="rotate_left" class="btn-select btn-rotate" @mousedown="startRotate('left')"
+          @mouseleave="onMouseLeave">
           <i class="fas fa-chevron-left center"></i>
         </button>
         <div class="rotate-text">
           <span class="grey-text center">Rotate</span>
         </div>
-        <button
-          id="rotate_right"
-          class="btn-select btn-rotate"
-          @mousedown="startRotate('right')"
-          @mouseleave="onMouseLeave"
-        >
+        <button id="rotate_right" class="btn-select btn-rotate" @mousedown="startRotate('right')"
+          @mouseleave="onMouseLeave">
           <i class="fas fa-chevron-right center"></i>
         </button>
         <button id="cancel" class="btn-select" @click="close()">Close</button>
@@ -60,6 +48,24 @@
 
       <div class="divider-menu-bottom"></div>
     </div>
+    <ConfirmationModal :visible="showModal" title="Purchase" @close="hideModal()">
+      <p style="text-align: center">Purchase by selecting cash or gold.</p>
+      <div class="divider-menu-top" style="margin-top: 1rem"></div>
+      <div class="flex cta-wrapper">
+        <button @click="purchase(0)" class="modal-btn flex flex-auto" v-if="useCash">
+          <img src="../assets/img/money.png" />{{ compCashPrice }}
+        </button>
+        <!--  -->
+        <button @click="purchase(1)" class="modal-btn flex flex-auto" v-if="useGold">
+          <img src="../assets/img/gold.png" />{{ compGoldPrice }}
+        </button>
+        <!--  -->
+        <button @click="hideModal" class="modal-btn flex flex-auto">
+          {{ isSaveEnabled ? "Cancel" : "Close" }}
+        </button>
+      </div>
+      <div class="divider-menu-bottom"></div>
+    </ConfirmationModal>
   </div>
 </template>
 
@@ -69,6 +75,9 @@ import api from "@/api";
 import MenuButton from "@/components/MenuButton.vue";
 import MyWagonMenu from "@/components/MyWagonMenu.vue";
 import ShopMenu from "@/components/ShopMenu.vue";
+import CompMenu from "@/components/CompMenu.vue";
+import ConfirmationModal from "@/components/ConfirmationModal.vue";
+
 
 export default {
   name: "HorseMenu",
@@ -84,6 +93,8 @@ export default {
     MenuButton,
     MyWagonMenu,
     ShopMenu,
+    CompMenu,
+    ConfirmationModal
   },
   mounted() {
     window.addEventListener("mouseup", this.mouseUp, false);
@@ -92,10 +103,35 @@ export default {
     window.removeEventListener("mouseup", this.mouseUp);
   },
   methods: {
+    hideModal() {
+      this.showModal = false;
+      this.$store.dispatch("setShowCompPrice", true);
+    },
     close() {
       api
         .post("CloseMenu", {
           MenuAction: "Close",
+        })
+        .catch((e) => {
+          console.log(e.message);
+        });
+    },
+    save() {
+      if (this.compCashPrice == 0 && this.compGoldPrice == 0) {
+        this.purchase(0);
+        return;
+      }
+
+      this.$store.dispatch("setShowCompPrice", false);
+      this.showModal = true;
+    },
+    purchase(currency) {
+      api
+        .post("CloseStable", {
+          MenuAction: "save",
+          cashPrice: this.compCashPrice,
+          goldPrice: this.compGoldPrice,
+          currencyType: currency, // 0 = Cash 1 = Gold
         })
         .catch((e) => {
           console.log(e.message);
@@ -129,9 +165,18 @@ export default {
     },
   },
   computed: {
-    ...mapState(["shopName"]),
+    ...mapState(["shopName", "activeWagon", "compCashPrice", "compGoldPrice","allowSave", "currencyType"]),
     isClosed() {
-      return this.activeHorse === null;
+      return this.activeWagon === null;
+    },
+    useCash() {
+      return this.currencyType < 1 || this.currencyType > 1;
+    },
+    useGold() {
+      return this.currencyType > 0;
+    },
+    isSaveEnabled() {
+      return this.allowSave;
     },
   },
 };
@@ -147,8 +192,8 @@ export default {
   left: 2%;
   top: 5%;
   width: 420px;
-  color: #e7e7e7;
-  background: url("/public/img/bgPanel.png");
+  color: #e7e7e7 !important;
+  background: url("../assets/img/bgPanel.png");
   background-size: 100% 100%;
   display: block;
 }
@@ -160,12 +205,15 @@ export default {
   overflow: hidden;
   transition: all 0.5s;
 }
+
 .flex {
   display: flex;
 }
+
 .flex-auto {
   flex: 1 1 auto;
 }
+
 .modal-btn {
   flex-direction: row;
   justify-content: center;
@@ -180,19 +228,22 @@ export default {
   transition: background-color 0.2s ease-out;
   border: 0px #fff solid;
 }
+
 .modal-btn:hover {
-  background: url("/public/img/buttonv.png");
+  background: url("../assets/img/buttonv.png");
   background-size: 90% 100%;
   background-repeat: no-repeat;
   background-position: right;
   border-radius: 0px;
 }
+
 .cta-wrapper {
-  background: url("/public/img/input.png");
+  background: url("../assets/img/input.png");
   background-position: center;
   background-size: 100% 100%;
   height: 4vh;
 }
+
 .header-text {
   position: relative;
   padding: 20px 20px;
@@ -202,7 +253,7 @@ export default {
   color: #f0f0f0;
   font-family: "crock";
   text-align: center;
-  background: url("/public/img/menu_header.png");
+  background: url("../assets/img/menu_header.png");
   background-position: center;
   background-size: 85% 85%;
   background-repeat: no-repeat;
@@ -215,10 +266,11 @@ export default {
   border-radius: 0px;
   padding: 0px 20px;
   height: 5vh;
-  background: url("/public/img/input.png");
+  background: url("../assets/img/input.png");
   background-position: center;
   background-size: 95% 100%;
 }
+
 .main-nav-buttons {
   margin-top: 5px;
   margin-bottom: 15px;
@@ -229,7 +281,7 @@ export default {
   width: 90%;
   height: 4px;
   margin: auto auto;
-  background-image: url("/public/img/divider_line.png");
+  background-image: url("../assets/img/divider_line.png");
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100% 100%;
@@ -251,7 +303,7 @@ export default {
   border-radius: 0px;
   padding: 0px 20px;
   height: 4vh;
-  background: url("/public/img/input.png");
+  background: url("../assets/img/input.png");
   background-position: center;
   background-size: 95% 100%;
 }
@@ -271,7 +323,7 @@ export default {
   font-weight: 500;
   letter-spacing: 1.5px;
   color: #4b4a4a;
-  background-color: transparent;
+  background-color: transparent !important;
 }
 
 .btn-select {
@@ -284,11 +336,11 @@ export default {
   font-weight: 500;
   letter-spacing: 1.5px;
   color: #9e9e9e;
-  background-color: transparent;
+  background-color: transparent !important;
 }
 
 .btn-select:hover {
-  background: url("/public/img/buttonv.png");
+  background: url("../assets/img/buttonv.png");
   background-size: 100% 100%;
   color: #f0f0f0;
 }
