@@ -32,4 +32,7 @@ Locales["en_lang"] = {
     tradeFailed = "Trade failed! ",
     tooManyWagons = " has too many wagons",
     readyToTrade = "Ready to trade wagon!",
+    shortGold = "You don't have enough gold",
+    shortCash = "You don't have enough money",
+    purchaseSuccessful = "Purchase Successful!",
 }

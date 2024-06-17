@@ -127,7 +127,7 @@ export default {
     },
     purchase(currency) {
       api
-        .post("CloseStable", {
+        .post("CloseMenu", {
           MenuAction: "save",
           cashPrice: this.compCashPrice,
           goldPrice: this.compGoldPrice,

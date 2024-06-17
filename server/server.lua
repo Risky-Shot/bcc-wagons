@@ -81,11 +81,12 @@ VORPcore.Callback.Register('bcc-wagons:GetWagonData', function(source, cb)
     if #wagons ~= 0 then
         for i = 1, #wagons do
             if wagons[i].selected == 1 then
-                TriggerClientEvent('bcc-wagons:SpawnWagon', src, wagons[i].model, wagons[i].name, wagons[i].id)
+                --TriggerClientEvent('bcc-wagons:SpawnWagon', src, wagons[i].model, wagons[i].name, wagons[i].id)
                 data = {
                     model = wagons[i].model,
                     name = wagons[i].name,
-                    id = wagons[i].id
+                    id = wagons[i].id,
+                    components = wagons[i].components
                 }
                 cb(data)
             end
@@ -193,6 +194,41 @@ end)
 RegisterServerEvent('bcc-wagons:OpenInventory', function(id)
     local src = source
     exports.vorp_inventory:openInventory(src, 'wagon_' .. tostring(id))
+end)
+
+RegisterNetEvent('bcc-wagons:UpdateComponents', function(components, wagonId, MyWagon_entity)
+    local src = source
+    local Character = VORPcore.getUser(src).getUsedCharacter
+    local charid = Character.charIdentifier
+    local encodedComponents = json.encode(components)
+
+    local result = MySQL.query.await('UPDATE `player_wagons` SET `components` = ? WHERE `charid` = ? AND `id` = ?', { encodedComponents, charid, wagonId })
+    TriggerClientEvent('bcc-wagons:SetComponents', src,  MyWagon_entity, components)
+end)
+
+RegisterNetEvent('bcc-wagons:BuyComp', function(data)
+    local src = source
+    local Character = VORPcore.getUser(src).getUsedCharacter
+
+    if tonumber(data.cashPrice) > 0 and tonumber(data.goldPrice) > 0 then
+        if tonumber(data.currencyType) == 0 then
+            if Character.money >= data.cashPrice then
+                Character.removeCurrency(0, data.cashPrice)
+            else
+                VORPcore.NotifyRightTip(src, _U('shortCash'), 4000)
+                return
+            end
+        else
+            if Character.gold >= data.goldPrice then
+                Character.removeCurrency(1, data.goldPrice)
+            else
+                VORPcore.NotifyRightTip(src, _U('shortGold'), 4000)
+                return
+            end
+        end
+        VORPcore.NotifyRightTip(src, _U('purchaseSuccessful'), 4000)
+    end
+    TriggerClientEvent('bcc-wagons:SaveComps', src)
 end)
 
 VORPcore.Callback.Register('bcc-wagons:CheckJob', function(source, cb, wainwright, site)

@@ -34,7 +34,6 @@ export default createStore({
 
     //CUSTOMIZATION
     SET_COMPONENTS(state, payload) {
-      console.log(payload);
       state.comps = payload;
     },
     SET_COMP_CASH_PRICE(state, payload) {

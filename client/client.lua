@@ -8,7 +8,7 @@ local TargetReturn, TargetTrade = nil, nil
 local PromptsStarted = false
 -- Wagons
 local ShopName, ShopEntity, Site
-local MyEntity, MyWagonId, MyWagonName
+local MyEntity, MyWagonId, MyWagonName, MyEntityID
 local MyWagon = nil
 local InMenu = false
 local Cam = false
@@ -16,7 +16,7 @@ local HasJob = false
 local IsWainwright = false
 local Trading = false
 -- Comps
-local LanternsUsing, LiveriesUsing, PropsetUsing, TintsUsing = 0, 0, 0, 0
+local LanternUsing, LiveryUsing, PropsetUsing, TintUsing = nil, nil, nil, nil
 
 CreateThread(function()
     StartPrompts()
@@ -231,6 +231,7 @@ end
 
 RegisterNUICallback('LoadMyWagon', function(data, cb)
     cb('ok')
+    MyEntityID = data.WagonId
     if ShopEntity then
         DeleteEntity(ShopEntity)
         ShopEntity = nil
@@ -248,9 +249,44 @@ RegisterNUICallback('LoadMyWagon', function(data, cb)
     MyEntity = CreateVehicle(model, siteCfg.wagon.coords, siteCfg.wagon.heading, false, false, false, false)
     Citizen.InvokeNative(0x7263332501E07F52, MyEntity, true) -- SetVehicleOnGroundProperly
     Citizen.InvokeNative(0x7D9EFB7AD6B19754, MyEntity, true) -- FreezeEntityPosition
+    
+
+    local CurrentComps = json.decode(data.WagonComp)
+
+    local Lantern = CurrentComps["Lantern"]
+    local Livery = CurrentComps["Livery"]
+    local Propset = CurrentComps["Propset"]
+    local Tint = CurrentComps["Tint"]
+    
+    if Lantern ~= nil then
+        Citizen.InvokeNative(0xC0F0417A90402742, MyEntity, GetHashKey(Lantern)) -- Apply Lantern
+    else
+        Citizen.InvokeNative(0xE31C0CB1C3186D40, MyEntity) -- Remove All Lantern
+    end
+
+    if Livery ~= nil then
+        SetVehicleLivery(MyEntity, tonumber(Livery))
+    else
+        SetVehicleLivery(MyEntity, -1)
+    end
+
+    if Propset ~= nil then
+        Citizen.InvokeNative(0x75F90E4051CC084C, MyEntity, 0)
+        Wait(100)
+        Citizen.InvokeNative(0x75F90E4051CC084C, MyEntity, GetHashKey(Propset))
+    else
+        Citizen.InvokeNative(0x75F90E4051CC084C, MyEntity, 0)
+    end
+
+    if Tint ~= nil then
+        Citizen.InvokeNative(0x8268B098F6FCA4E2, MyEntity, tonumber(Tint))
+    else
+        Citizen.InvokeNative(0x8268B098F6FCA4E2, MyEntity, 0) -- Load First Tint
+    end
+
     SetModelAsNoLongerNeeded(model)
+
     local comps = GetCompsForWagon(data.WagonModel)
-    print(json.encode(comps))
     SendNUIMessage({
         action = 'updateComps',
         compData = comps
@@ -262,29 +298,29 @@ RegisterNUICallback('LoadMyWagon', function(data, cb)
 end)
 
 -- Manage Comps
-RegisterNUICallback('Lanterns', function(data, cb)
+RegisterNUICallback('Lantern', function(data, cb)
     cb('ok')
     if tonumber(data.id) == -1 then
-        LanternsUsing = 0
+        LanternUsing = ""
         Citizen.InvokeNative(0xE31C0CB1C3186D40, MyEntity)
     else
         Citizen.InvokeNative(0xC0F0417A90402742, MyEntity, GetHashKey(data.hash))
-        LanternsUsing = data.hash
+        LanternUsing = data.hash
     end
 end)
 
-RegisterNUICallback('Liveries', function(data, cb)
+RegisterNUICallback('Livery', function(data, cb)
     cb('ok')
     if tonumber(data.id) == -1 then
-        LiveriesUsing = 0
+        LiveryUsing = nil
         Citizen.InvokeNative(0xF89D82A0582E46ED, MyEntity, -1)
     else
         Citizen.InvokeNative(0xF89D82A0582E46ED, MyEntity, tonumber(data.hash))
-        LiveriesUsing = data.hash
+        LiveryUsing = data.hash
     end
 end)
 
-RegisterNUICallback('Propsets', function(data, cb)
+RegisterNUICallback('Propset', function(data, cb)
     cb('ok')
     if tonumber(data.id) == -1 then
         PropsetUsing = 0
@@ -297,15 +333,32 @@ RegisterNUICallback('Propsets', function(data, cb)
     end
 end)
 
-RegisterNUICallback('Tints', function(data, cb)
+RegisterNUICallback('Tint', function(data, cb)
     cb('ok')
     if tonumber(data.id) == -1 then
-        TintsUsing = 0
+        TintUsing = 0
         Citizen.InvokeNative(0x8268B098F6FCA4E2, MyEntity, 0)
     else
         Citizen.InvokeNative(0x8268B098F6FCA4E2, MyEntity, tonumber(data.hash))
-        TintsUsing = data.hash
+        TintUsing = data.hash
     end
+end)
+
+-- Save Wagon Comp to Database
+RegisterNetEvent('bcc-wagons:SaveComps', function()
+    local compData = {
+        Lantern = LanternUsing,
+        Propset = PropsetUsing,
+        Tint = TintUsing,
+        Livery = LiveryUsing
+    }
+    TriggerServerEvent('bcc-wagons:UpdateComponents', compData, MyEntityID, MyEntity)
+end)
+
+RegisterNetEvent('bcc-wagons:SetComponents', function(wagonEntity, components)
+    -- for _, value in pairs(components) do
+    --     NativeSetPedComponentEnabled(horseEntity, value)
+    -- end
 end)
 
 RegisterNUICallback('SelectWagon', function(data, cb)
@@ -316,16 +369,16 @@ end)
 function GetSelectedWagon()
     local data = VORPcore.Callback.TriggerAwait('bcc-wagons:GetWagonData')
     if data then
-        SpawnWagon(data.model, data.name, false, data.id)
+        SpawnWagon(data.model, data.name, false, data.id, data.components)
     end
 end
 
 RegisterNUICallback('SpawnInfo', function(data, cb)
     cb('ok')
-    SpawnWagon(data.WagonModel, data.WagonName, true, data.WagonId)
+    SpawnWagon(data.WagonModel, data.WagonName, true, data.WagonId, data.WagonComp)
 end)
 
-function SpawnWagon(wagonModel, name, menuSpawn, id)
+function SpawnWagon(wagonModel, name, menuSpawn, id, components)
     ResetWagon()
     MyWagonName = name
     local model = joaat(wagonModel)
@@ -358,12 +411,48 @@ function SpawnWagon(wagonModel, name, menuSpawn, id)
             end
         end
         MyWagon = CreateVehicle(model, node, heading, true, false, false, false)
+        SetEntityCollision(MyWagon, false, false)
         Citizen.InvokeNative(0x7263332501E07F52, MyWagon, true) -- SetVehicleOnGroundProperly
         SetModelAsNoLongerNeeded(model)
     end
 
     MyWagonId = id
     TriggerServerEvent('bcc-wagons:RegisterInventory', MyWagonId, wagonModel)
+
+    -- Add Components
+    local comps = json.decode(components)
+
+    local Lantern = comps["Lantern"]
+    local Livery = comps["Livery"]
+    local Propset = comps["Propset"]
+    local Tint = comps["Tint"]
+
+
+    if Lantern ~= nil then
+        Citizen.InvokeNative(0xC0F0417A90402742, MyWagon, GetHashKey(Lantern)) -- Apply Lantern
+    else
+        Citizen.InvokeNative(0xE31C0CB1C3186D40, MyWagon) -- Remove All Lantern
+    end
+
+    if Livery ~= nil then
+        Citizen.InvokeNative(0xF89D82A0582E46ED, MyWagon, Livery)
+    else
+        Citizen.InvokeNative(0xF89D82A0582E46ED, MyWagon, -1)
+    end
+
+    if Propset ~= nil then
+        Citizen.InvokeNative(0x75F90E4051CC084C, MyWagon, 0)
+        Wait(100)
+        Citizen.InvokeNative(0x75F90E4051CC084C, MyWagon, GetHashKey(Propset))
+    else
+        Citizen.InvokeNative(0x75F90E4051CC084C, MyWagon, 0)
+    end
+
+    if Tint ~= nil then
+        Citizen.InvokeNative(0x8268B098F6FCA4E2, MyWagon, tonumber(Tint))
+    else
+        Citizen.InvokeNative(0x8268B098F6FCA4E2, MyWagon, 0) -- Load First Livery
+    end
 
     if Config.wagonTag then
         TriggerEvent('bcc-wagons:WagonTag')
@@ -449,6 +538,12 @@ RegisterNUICallback('CloseMenu', function(data, cb)
     DisplayRadar(true)
     InMenu = false
     ClearPedTasksImmediately(PlayerPedId())
+
+    if data.MenuAction == 'save' then
+        TriggerServerEvent('bcc-wagons:BuyComp', data)
+    else
+        return
+    end
 end)
 
 -- Reopen Menu After Sell or Failed Purchase

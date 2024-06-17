@@ -48,18 +48,16 @@ export default {
         };
     },
     mounted() {
-        // let currentComps = JSON.parse(this.activeWagon["components"]);
-
-        // for (const [key, comp] of Object.entries(this.wagonComps)) {
-        //     if (
-        //         Object.keys(currentComps).length &&
-        //         currentComps.includes(comp["hash"])
-        //     ) {
-        //         this.curItem = parseInt(key) + 1;
-        //         break;
-        //     }
-        // }
-        // this.updateItem();
+        let currentComps = JSON.parse(this.activeWagon["components"]);    
+        for (const [key, comp] of Object.entries(this.wagonComps)) {
+            if (
+                currentComps[this.label] == comp["hash"]
+            ) {
+                this.curItem = parseInt(key) + 1;
+                break;
+            }
+        }
+        this.updateItem();
     },
     computed: {
         ...mapState([
@@ -96,7 +94,6 @@ export default {
                     "setCompCashPrice",
                     this.compCashPrice + parseInt(this.wagonComps[newValue]["cashPrice"])
                 );
-
                 this.$store.dispatch(
                     "setCompGoldPrice",
                     this.compGoldPrice + parseInt(this.wagonComps[newValue]["goldPrice"])
@@ -109,7 +106,6 @@ export default {
                 this.compGoldPrice == 0
             ) {
                 this.$store.dispatch("setShowCompPrice", false);
-                this.$store.dispatch("setAllowSave", false);
             } else if (
                 !this.showCompPrice &&
                 this.compCashPrice &&
@@ -122,16 +118,23 @@ export default {
     },
     methods: {
         isOwned(index) {
-            //console.log(typeof(this.activeWagon["components"]));
-            console.log(index)
-            // let currentComps = JSON.parse(this.activeWagon["components"]);
             
-            // return (
-            //     Object.keys(currentComps).length &&
-            //     currentComps.includes(this.wagonComps[index]["hash"])
-            // );
+            let currentComps = JSON.parse(this.activeWagon["components"]);
 
-            return false
+            // Normalize the label to match keys in currentComps and wagonData
+            const normalizedLabel = this.label.charAt(0).toUpperCase() + this.label.slice(1).toLowerCase();
+
+            let wagonData = this.wagonComps;
+            // Check if the label and index are valid
+            if (index < 0 || index >= wagonData.length) {
+                return false;
+            }
+
+            const item = wagonData[index];
+            const currentValue = currentComps[normalizedLabel];
+            
+            // Compare the hash
+            return item.hash === currentValue;
         },
         increase() {
             if (++this.curItem > this.maxItems) {

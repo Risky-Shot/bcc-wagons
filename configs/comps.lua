@@ -1,5 +1,5 @@
 Comps = {
-    ["Lanterns"] = {
+    ["Lantern"] = {
         -- Buggies
         ["buggy01"] = {},
         ["buggy02"] = {},
@@ -142,7 +142,7 @@ Comps = {
         ["warWagon2"] = {},
 
     },
-    ["Liveries"] = {
+    ["Livery"] = {
         ["gatchuck"] = {
             {hash = 0, cashPrice = 20, goldPrice = 1 },
             {hash = 1, cashPrice = 20, goldPrice = 1 },
@@ -759,7 +759,7 @@ Comps = {
         ["logwagon"] = {},
         ["wagoncircus01x"] = {},
     }, 
-    ["Propsets"] = {
+    ["Propset"] = {
         ["cart01"] = {
             {hash ="pg_re_checkpoint02x_food", cashPrice = 20, goldPrice = 1 },
             {hash ="pg_re_moonshineCampgroupCart01x", cashPrice = 20, goldPrice = 1 },
@@ -1164,7 +1164,7 @@ Comps = {
         ["bountywagon01x"] = {},
         ["wagonarmoured01x"] = {},
     },
-    ['Tints'] = { 
+    ['Tint'] = { 
         ['coach2'] = { 
             { hash = 0 , cashPrice = 20, goldPrice = 1 }, 
             { hash = 1 , cashPrice = 20, goldPrice = 1 }, 

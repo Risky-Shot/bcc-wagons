@@ -2,16 +2,15 @@
   <div v-if="myWagons">
     <div v-if="Object.keys(myWagons).length">
       <div>
-        <MyWagonMenuItem
-          :label="wagon.name"
-          :index="wagon.id"
-          :model="wagon.model"
+        <MyWagonMenuItem 
+          :label="wagon.name" 
+          :index="wagon.id" 
+          :model="wagon.model" 
           :wagon="wagon"
-          :selected="activeDropdown"
+          :selected="activeDropdown" 
+          :components="JSON.parse(wagon.components)" 
           v-for="(wagon, index) in myWagons"
-          :key="index"
-          @iExpanded="onChildExpansion($event)"
-        />
+          :key="index" @iExpanded="onChildExpansion($event)" />
       </div>
     </div>
     <div v-else>

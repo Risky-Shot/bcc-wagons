@@ -51,9 +51,9 @@ export default {
     label: String,
     index: Number,
     model: String,
+    components: Object,
     selected: Number,
     wagon: Object,
-    components : Object
   },
   data() {
     return {
@@ -91,6 +91,7 @@ export default {
           .post("LoadMyWagon", {
             WagonId: this.index,
             WagonModel: this.model,
+            WagonComp: JSON.stringify(this.components),
           })
           .catch((e) => {
             console.log(e.message);
@@ -124,6 +125,7 @@ export default {
           WagonId: this.index,
           WagonModel: this.model,
           WagonName: this.label,
+          WagonComp: JSON.stringify(this.components),
         })
         .catch((e) => {
           console.log(e.message);
